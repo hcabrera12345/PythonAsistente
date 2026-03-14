@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 load_dotenv()
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
-# ─── Herramienta: Crear archivo de texto descargable ──────────────────────────
 def create_downloadable_file(filename: str, content: str) -> str:
     """
     Crea un archivo de texto (.txt, .py, etc.) en el servidor para que el usuario lo descargue.
@@ -21,7 +20,6 @@ def create_downloadable_file(filename: str, content: str) -> str:
         f.write(content)
     return f"SUCCESS. Archivo disponible en: /static/downloads/{safe_name}"
 
-# ─── Herramienta: Ejecutar Python (Code Interpreter) ─────────────────────────
 def execute_python_script(script_code: str) -> str:
     """
     Ejecuta un script Python en el servidor y retorna su salida.
@@ -45,7 +43,6 @@ def execute_python_script(script_code: str) -> str:
     except Exception as e:
         return f"EXCEPCIÓN: {e}"
 
-# ─── Prompt del Sistema ───────────────────────────────────────────────────────
 system_instruction = """
 Eres una asistente virtual de programación, especializada en Python. 
 Eres inteligente, sofisticada, amable y un poco coqueta.
@@ -72,7 +69,7 @@ Si te piden un Excel, Word o PowerPoint:
 [RESTRICCIONES]
 - No tienes acceso a WhatsApp, Google Calendar, Gmail ni cámara.
 - Solo puedes revisar código, generar archivos y responder preguntas de programación.
-- Si te piden algo fuera de tu alcance (cámara, WhatsApp, etc.), explícalo amablemente.
+- Si te piden algo fuera de tu alcance, explícalo amablemente.
 """
 
 model = genai.GenerativeModel(
@@ -83,13 +80,24 @@ model = genai.GenerativeModel(
 
 chat_session = model.start_chat(enable_automatic_function_calling=True, history=[])
 
-async def process_chat_message(message: str) -> str:
+async def process_chat_message(message: str) -> tuple[str, int]:
+    """
+    Procesa el mensaje con Gemini y retorna (texto_respuesta, tokens_usados).
+    """
     try:
         response = chat_session.send_message(message)
-        return response.text
+        
+        # Extraer conteo de tokens del metadata de la respuesta
+        tokens = 0
+        try:
+            tokens = response.usage_metadata.total_token_count
+        except Exception:
+            pass
+        
+        return response.text, tokens
     except Exception as e:
         error_msg = str(e)
         print(f"Error Gemini: {error_msg}")
         if "429" in error_msg or "Quota" in error_msg:
-            return "Disculpa, llegué al límite de operaciones por este momento. Dame unos 30 segundos y vuelve a intentarlo."
-        return "Lo siento, hubo un error de conexión con mi núcleo de inteligencia. Por favor, intenta de nuevo."
+            return "Disculpa, llegué al límite de operaciones por este momento. Dame unos 30 segundos y vuelve a intentarlo.", 0
+        return "Lo siento, hubo un error de conexión con mi núcleo de inteligencia. Por favor, intenta de nuevo.", 0

@@ -12,15 +12,27 @@
 
 <body>
 
-    <!-- Modal Bienvenida (primer uso) -->
+    <!-- Modal Bienvenida: Código de acceso + Nombre (primer uso) -->
     <div id="welcome-modal" class="welcome-modal" style="display:none;">
         <div class="welcome-card">
             <span class="welcome-emoji">🤖</span>
             <h2>MYASISTENTE</h2>
             <p>Especialista en revisión y corrección de código Python con Inteligencia Artificial.</p>
-            <label class="welcome-label">¿CÓMO QUIERES QUE TE LLAME?</label>
-            <input type="text" id="user-name-input" class="welcome-input" placeholder="Tu nombre...">
-            <button id="welcome-btn" class="welcome-btn">COMENZAR →</button>
+
+            <!-- Paso 1: Código de acceso -->
+            <div id="step-access">
+                <label class="welcome-label">CÓDIGO DE ACCESO</label>
+                <input type="password" id="access-code-input" class="welcome-input" placeholder="Ingresa el código...">
+                <button id="btn-verify-access" class="welcome-btn">VERIFICAR →</button>
+                <p id="access-error" style="color:#ff6b6b; font-size:12px; margin-top:8px; display:none;">Código incorrecto. Intenta de nuevo.</p>
+            </div>
+
+            <!-- Paso 2: Nombre (se muestra tras verificar acceso) -->
+            <div id="step-name" style="display:none;">
+                <label class="welcome-label">¿CÓMO QUIERES QUE TE LLAME?</label>
+                <input type="text" id="user-name-input" class="welcome-input" placeholder="Tu nombre...">
+                <button id="welcome-btn" class="welcome-btn">COMENZAR →</button>
+            </div>
         </div>
     </div>
 
@@ -50,7 +62,7 @@
         <button id="btn-code-lab" class="control-btn" style="background:rgba(255,140,0,0.15); border-color:rgba(255,140,0,0.6); color:#ffa500;">📄 CODE LAB</button>
     </div>
 
-    <!-- Panel Code Lab (centrado, más grande, responsivo) -->
+    <!-- Panel Code Lab -->
     <div id="code-lab-panel" class="code-lab-panel">
         <h3>📄 CODE LAB — REVISOR DE CÓDIGO PYTHON</h3>
 

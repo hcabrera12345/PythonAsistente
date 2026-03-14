@@ -1,4 +1,4 @@
-// static/js/app.js — MyAsistente (Versión Pública)
+// static/js/app.js — MyAsistente (Versión Pública con Analytics + Control de Acceso)
 
 document.addEventListener('DOMContentLoaded', () => {
     const aiOrb = document.getElementById('ai-orb');
@@ -8,48 +8,91 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnListen = document.getElementById('btn-listen');
     const globalAudio = document.getElementById('audio-player');
 
-    // ──────────────────────────────────────────────────────────────
-    // GESTIÓN DEL NOMBRE DE USUARIO (localStorage)
-    // ──────────────────────────────────────────────────────────────
+    // ── Estado de sesión ──────────────────────────────────────────
+    let userName = localStorage.getItem('myasistente_username') || 'Desconocido';
+    let accessCode = sessionStorage.getItem('myasistente_access_code') || '';
+    let sessionStart = Date.now();
+
+    // ── Modal de Bienvenida / Acceso ──────────────────────────────
     const welcomeModal = document.getElementById('welcome-modal');
+    const stepAccess = document.getElementById('step-access');
+    const stepName = document.getElementById('step-name');
+    const accessCodeInput = document.getElementById('access-code-input');
+    const btnVerifyAccess = document.getElementById('btn-verify-access');
+    const accessError = document.getElementById('access-error');
     const userNameInput = document.getElementById('user-name-input');
     const welcomeBtn = document.getElementById('welcome-btn');
 
-    let userName = localStorage.getItem('myasistente_username');
-
-    function initSession(name) {
-        userName = name;
-        welcomeModal.style.display = 'none';
-        assistantText.textContent = 'Hola, estoy lista para ayudarte.';
-        // Enviar saludo inicial al cerebro con el nombre
-        sendCommandToBrain(`Hola, mi nombre es ${name}. Preséntate brevemente.`);
+    async function verifyAccessCode(code) {
+        try {
+            const res = await fetch('/api/verify-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+            return res.ok;
+        } catch {
+            return false;
+        }
     }
 
-    if (!userName) {
-        // Primer uso: mostrar modal
-        welcomeModal.style.display = 'flex';
-        userNameInput.focus();
-    } else {
-        // Usuario conocido
-        welcomeModal.style.display = 'none';
-        assistantText.textContent = `Bienvenido de nuevo, ${userName}.`;
-        sendCommandToBrain(`Hola de nuevo, soy ${userName}. Salúdame brevemente.`);
+    async function initApp() {
+        // Si ya tiene código de acceso válido en sesión y nombre guardado
+        if (accessCode && userName && userName !== 'Desconocido') {
+            welcomeModal.style.display = 'none';
+            assistantText.textContent = `Bienvenido de nuevo, ${userName}.`;
+            sendCommandToBrain(`Hola de nuevo, soy ${userName}. Salúdame brevemente.`, 'Voz');
+        } else if (accessCode) {
+            // Tiene código pero no nombre → pedir nombre
+            welcomeModal.style.display = 'flex';
+            stepAccess.style.display = 'none';
+            stepName.style.display = 'block';
+        } else {
+            // Primera visita → pedir código
+            welcomeModal.style.display = 'flex';
+        }
     }
 
+    // Verificar código de acceso
+    btnVerifyAccess.addEventListener('click', async () => {
+        const code = accessCodeInput.value.trim();
+        if (!code) { accessCodeInput.focus(); return; }
+
+        btnVerifyAccess.textContent = 'Verificando...';
+        const valid = await verifyAccessCode(code);
+        btnVerifyAccess.textContent = 'VERIFICAR →';
+
+        if (valid) {
+            accessCode = code;
+            sessionStorage.setItem('myasistente_access_code', code);
+            accessError.style.display = 'none';
+            stepAccess.style.display = 'none';
+            stepName.style.display = 'block';
+            userNameInput.focus();
+        } else {
+            accessError.style.display = 'block';
+            accessCodeInput.value = '';
+            accessCodeInput.focus();
+        }
+    });
+
+    accessCodeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') btnVerifyAccess.click(); });
+
+    // Confirmar nombre y comenzar
     welcomeBtn.addEventListener('click', () => {
         const name = userNameInput.value.trim();
         if (!name) { userNameInput.focus(); return; }
+        userName = name;
         localStorage.setItem('myasistente_username', name);
-        initSession(name);
+        welcomeModal.style.display = 'none';
+        sendCommandToBrain(`Hola, mi nombre es ${name}. Preséntate brevemente.`, 'Voz');
     });
 
-    userNameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') welcomeBtn.click();
-    });
+    userNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') welcomeBtn.click(); });
 
-    // ──────────────────────────────────────────────────────────────
-    // RECONOCIMIENTO DE VOZ
-    // ──────────────────────────────────────────────────────────────
+    initApp();
+
+    // ── Reconocimiento de voz ─────────────────────────────────────
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition;
 
@@ -70,21 +113,17 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onresult = async (event) => {
             const speechResult = event.results[0][0].transcript;
             assistantText.textContent = `Tú: "${speechResult}"`;
-            await sendCommandToBrain(speechResult);
+            await sendCommandToBrain(speechResult, 'Voz');
         };
 
         recognition.onspeechend = () => recognition.stop();
-        recognition.onerror = (event) => {
-            assistantText.textContent = 'Error al escuchar: ' + event.error;
-            resetUI();
-        };
+        recognition.onerror = (e) => { assistantText.textContent = 'Error al escuchar: ' + e.error; resetUI(); };
         recognition.onend = () => resetUI();
     } else {
         assistantText.textContent = 'Tu navegador no soporta reconocimiento de voz.';
         btnListen.disabled = true;
     }
 
-    // Animaciones del audio
     globalAudio.onplay = () => aiOrb.classList.add('listening');
     globalAudio.onended = () => { aiOrb.classList.remove('listening'); resetUI(); };
 
@@ -96,11 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnListen.addEventListener('click', () => {
-        // Desbloquear contexto de audio en móvil
         globalAudio.src = 'data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
         globalAudio.play().catch(() => {});
         globalAudio.pause();
-
         if (aiOrb.classList.contains('listening')) {
             recognition.stop();
         } else {
@@ -108,10 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ──────────────────────────────────────────────────────────────
-    // COMUNICACIÓN CON EL BACKEND
-    // ──────────────────────────────────────────────────────────────
-    async function sendCommandToBrain(text) {
+    // ── Comunicación con Backend ──────────────────────────────────
+    async function sendCommandToBrain(text, actionType = 'Voz') {
         systemStatus.textContent = 'PROCESANDO...';
         aiOrb.style.boxShadow = '0 0 80px rgba(128,0,255,0.8), inset 0 0 30px rgba(255,255,255,0.8)';
 
@@ -119,11 +154,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({
+                    message: text,
+                    user_name: userName,
+                    action_type: actionType,
+                    access_code: accessCode
+                })
             });
+
+            if (response.status === 401) {
+                // Código expirado o inválido — volver al modal
+                sessionStorage.removeItem('myasistente_access_code');
+                accessCode = '';
+                welcomeModal.style.display = 'flex';
+                stepAccess.style.display = 'block';
+                stepName.style.display = 'none';
+                resetUI();
+                return;
+            }
+
             const data = await response.json();
 
-            // Convertir markdown links en HTML
             const htmlText = data.response.replace(
                 /\[([^\]]+)\]\(([^)]+)\)/g,
                 '<a href="$2" target="_blank" style="color:#00c3ff; text-decoration:underline;">$1</a>'
@@ -142,9 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // CODE LAB
-    // ──────────────────────────────────────────────────────────────
+    // ── Code Lab ──────────────────────────────────────────────────
     const btnCodeLab = document.getElementById('btn-code-lab');
     const codeLabPanel = document.getElementById('code-lab-panel');
     const btnCloseLab = document.getElementById('btn-close-lab');
@@ -156,9 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCodeLab.addEventListener('click', () => {
         codeLabPanel.style.display = codeLabPanel.style.display === 'none' ? 'block' : 'none';
     });
-    btnCloseLab.addEventListener('click', () => {
-        codeLabPanel.style.display = 'none';
-    });
+    btnCloseLab.addEventListener('click', () => { codeLabPanel.style.display = 'none'; });
 
     codeFileInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
@@ -179,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         codeLabPanel.style.display = 'none';
         assistantText.textContent = '🔍 Analizando tu código con Gemini 3.1 Pro...';
-        await sendCommandToBrain(fullMessage);
+        await sendCommandToBrain(fullMessage, 'Code Lab');
     });
 
 });
