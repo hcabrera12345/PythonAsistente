@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+token.json
+credentials.json
+static/audio/
+static/downloads/
+*.pem
+*.key
+PyWhatKit_DB.txt

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAsistente — Revisor Python</title>
+    <meta name="description" content="Asistente virtual especializado en revisión y corrección de código Python con IA.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+
+    <!-- Modal Bienvenida (primer uso) -->
+    <div id="welcome-modal" class="welcome-modal" style="display:none;">
+        <div class="welcome-card">
+            <span class="welcome-emoji">🤖</span>
+            <h2>MYASISTENTE</h2>
+            <p>Especialista en revisión y corrección de código Python con Inteligencia Artificial.</p>
+            <label class="welcome-label">¿CÓMO QUIERES QUE TE LLAME?</label>
+            <input type="text" id="user-name-input" class="welcome-input" placeholder="Tu nombre...">
+            <button id="welcome-btn" class="welcome-btn">COMENZAR →</button>
+        </div>
+    </div>
+
+    <!-- Orbe Visual del AI -->
+    <div class="hologram-container">
+        <div class="orb-core" id="ai-orb">
+            <div class="ring outer-ring"></div>
+            <div class="ring inner-ring"></div>
+            <div class="eye-pupil"></div>
+        </div>
+    </div>
+
+    <!-- HUD: Estado y transcripción -->
+    <div class="hud">
+        <div class="status-indicator">
+            <span class="dot connected"></span>
+            <span id="system-status">SISTEMA EN LÍNEA</span>
+        </div>
+        <div class="transcript-box" id="transcript-box">
+            <p id="assistant-text">Iniciando sistema...</p>
+        </div>
+    </div>
+
+    <!-- Botones de control -->
+    <div class="controls">
+        <button id="btn-listen" class="control-btn">ACTIVAR MICRÓFONO</button>
+        <button id="btn-code-lab" class="control-btn" style="background:rgba(255,140,0,0.15); border-color:rgba(255,140,0,0.6); color:#ffa500;">📄 CODE LAB</button>
+    </div>
+
+    <!-- Panel Code Lab (centrado, más grande, responsivo) -->
+    <div id="code-lab-panel" class="code-lab-panel">
+        <h3>📄 CODE LAB — REVISOR DE CÓDIGO PYTHON</h3>
+
+        <label class="code-lab-label">1. SUBE UN ARCHIVO (.py o .txt):</label>
+        <input type="file" id="code-file-input" accept=".py,.txt"
+            style="display:block; width:100%; color:#aaa; font-size:clamp(11px,1.5vw,13px); margin-bottom:4px;">
+
+        <div class="code-lab-divider">— O PEGA TU CÓDIGO DIRECTAMENTE —</div>
+
+        <textarea id="code-paste-area" class="code-lab-textarea"
+            placeholder="Pega aquí tu código Python..."></textarea>
+
+        <div style="margin-top:14px;">
+            <label class="code-lab-label">2. INSTRUCCIÓN ADICIONAL (opcional):</label>
+            <input type="text" id="code-instruction" class="code-lab-input"
+                placeholder="ej: Optimiza este código, añade comentarios, corrígelo...">
+        </div>
+
+        <div class="code-lab-actions">
+            <button id="btn-analyze-code" class="btn-analyze">🔍 ANALIZAR Y CORREGIR</button>
+            <button id="btn-close-lab" class="btn-close-lab">✕</button>
+        </div>
+    </div>
+
+    <!-- Audio player oculto para TTS -->
+    <audio id="audio-player" style="display:none;"></audio>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
